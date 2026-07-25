@@ -1,6 +1,7 @@
 import { type RecordGqlFieldsAggregate } from '@/object-record/graphql/types/RecordGqlFieldsAggregate';
 import { useAggregateRecords } from '@/object-record/hooks/useAggregateRecords';
 import { type RecordGqlOperationFilter } from 'twenty-shared/types';
+import { AggregateOperations } from '~/generated-metadata/graphql';
 import { type FunnelStage } from '@/arqcrm/funnel/utils/funnelSegmentPath';
 
 // Métricas agregadas do painel.
@@ -25,21 +26,31 @@ import { type FunnelStage } from '@/arqcrm/funnel/utils/funnelSegmentPath';
 // acontece antes. Quem garante a condição é o componente pai; ver
 // `useIsDomainInstalled` e `PainelPage`.
 //
-// ⚠️ As constantes abaixo estão FORA do componente por necessidade, não por
-// estilo. `useAggregateRecordsQuery` memoiza o documento GraphQL usando o
-// objeto `recordGqlFieldsAggregate` como dependência: passar um literal inline
-// cria uma referência nova a cada render, o Apollo recebe uma query nova toda
-// vez, e o resultado nunca assenta — todo número fica zerado para sempre. Foi
-// exatamente esse o bug que zerou o painel inteiro na primeira subida.
+// ⚠️ Duas armadilhas já pagas aqui, as duas silenciosas:
+//
+// 1. As operações são o ENUM `AggregateOperations`, em maiúsculas. Escrever
+//    'count' em vez de AggregateOperations.COUNT não dá erro: o construtor da
+//    query procura a operação no mapa de agregações disponíveis, não encontra,
+//    e simplesmente PULA o campo. A query sai sem campo nenhum, o Apollo nem
+//    chega a mandar requisição, e todo número aparece zerado. Foi isso que
+//    zerou o painel inteiro. Usar o enum torna o erro impossível.
+//
+// 2. As constantes estão fora do componente por necessidade, não por estilo.
+//    `useAggregateRecordsQuery` memoiza o documento GraphQL usando o objeto
+//    `recordGqlFieldsAggregate` como dependência: um literal inline cria
+//    referência nova a cada render e o Apollo remonta a query sem parar.
 
-const CONTAGEM: RecordGqlFieldsAggregate = { id: ['count'] };
+const CONTAGEM: RecordGqlFieldsAggregate = { id: [AggregateOperations.COUNT] };
 const CONTAGEM_E_CONTRATADO: RecordGqlFieldsAggregate = {
-  id: ['count'],
-  valorContratado: ['sum'],
+  id: [AggregateOperations.COUNT],
+  valorContratado: [AggregateOperations.SUM],
 };
-const SOMA_RECEBIDO: RecordGqlFieldsAggregate = { valorRecebido: ['sum'] };
-const SOMA_VALOR: RecordGqlFieldsAggregate = { valor: ['sum'] };
-const CONTAGEM_E_VALOR: RecordGqlFieldsAggregate = { id: ['count'], valor: ['sum'] };
+const SOMA_RECEBIDO: RecordGqlFieldsAggregate = { valorRecebido: [AggregateOperations.SUM] };
+const SOMA_VALOR: RecordGqlFieldsAggregate = { valor: [AggregateOperations.SUM] };
+const CONTAGEM_E_VALOR: RecordGqlFieldsAggregate = {
+  id: [AggregateOperations.COUNT],
+  valor: [AggregateOperations.SUM],
+};
 
 const FILTRO_ENVIADA: RecordGqlOperationFilter = { enviadaEm: { is: 'NOT_NULL' } };
 const FILTRO_APROVADA: RecordGqlOperationFilter = { status: { eq: 'APROVADA' } };
@@ -53,10 +64,10 @@ const FILTRO_EM_ABERTO: RecordGqlOperationFilter = {
 type AggregateShape = { [field: string]: { [op: string]: number | undefined } };
 
 const contarComo = (data: AggregateShape | undefined, campo: string): number =>
-  Number(data?.[campo]?.count ?? 0);
+  Number(data?.[campo]?.[AggregateOperations.COUNT] ?? 0);
 
 const somarComo = (data: AggregateShape | undefined, campo: string): number =>
-  Number(data?.[campo]?.sum ?? 0);
+  Number(data?.[campo]?.[AggregateOperations.SUM] ?? 0);
 
 export type PainelMetrics = {
   isLoading: boolean;
