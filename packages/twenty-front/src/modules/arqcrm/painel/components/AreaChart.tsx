@@ -54,6 +54,13 @@ const StyledSvg = styled.svg`
   display: block;
   height: auto;
   width: 100%;
+
+  /* A fonte tem uma ligadura que transforma "R$" em "₹$" — o símbolo da rúpia.
+     Só acontece dentro do SVG; no HTML dos cards o mesmo texto sai certo.
+     Desligar ligaduras nos rótulos resolve, e nenhum deles precisa delas. */
+  text {
+    font-variant-ligatures: none;
+  }
 `;
 
 const StyledLegend = styled.div`
