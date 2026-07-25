@@ -43,6 +43,12 @@ const ArqcrmFunilPage = lazy(() =>
   })),
 );
 
+const ArqcrmLeadScorePage = lazy(() =>
+  import('@/arqcrm/score/components/LeadScorePage').then((module) => ({
+    default: module.LeadScorePage,
+  })),
+);
+
 const RecordIndexPage = lazy(() =>
   import('~/pages/object-record/RecordIndexPage').then((module) => ({
     default: module.RecordIndexPage,
@@ -186,6 +192,14 @@ const createWorkspaceAppRouter = (
                 element={
                   <LazyRoute>
                     <ArqcrmFunilPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="/lead-score"
+                element={
+                  <LazyRoute>
+                    <ArqcrmLeadScorePage />
                   </LazyRoute>
                 }
               />

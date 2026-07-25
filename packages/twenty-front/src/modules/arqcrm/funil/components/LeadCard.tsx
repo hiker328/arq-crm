@@ -14,6 +14,7 @@ import {
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 import { type LeadDoFunil } from '@/arqcrm/funil/hooks/useFunilLeads';
+import { GRADE_COR } from '@/arqcrm/score/constants/gradeCores';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
 
 // Cartão do lead no quadro do funil.
@@ -169,13 +170,6 @@ const StyledInicial = styled.span`
   width: 22px;
 `;
 
-
-const GRADE_COR: Record<string, { cor: string; fundo: string }> = {
-  A: { cor: themeCssVariables.color.green, fundo: themeCssVariables.color.green10 },
-  B: { cor: themeCssVariables.color.purple, fundo: themeCssVariables.color.purple10 },
-  C: { cor: themeCssVariables.color.yellow, fundo: themeCssVariables.color.yellow10 },
-  D: { cor: themeCssVariables.color.red, fundo: themeCssVariables.color.red10 },
-};
 
 const DIAS_SEM_CONTATO_PARA_ALERTAR = 10;
 
