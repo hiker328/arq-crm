@@ -27,6 +27,15 @@ import { MainAppLayoutWithSidePanel } from '@/ui/layout/page/components/MainAppL
 import { Verify } from '~/pages/onboarding/Verify';
 import { lazyWithPreload } from '~/utils/lazyWithPreload';
 
+// arqcrm: painel do escritório — tela onde design É o produto.
+// Ver UPSTREAM.md: este arquivo é uma das poucas edições em arquivo do upstream
+// que o orçamento de divergência permite, e a edição é de UMA linha de rota.
+const ArqcrmPainelPage = lazy(() =>
+  import('@/arqcrm/painel/components/PainelPage').then((module) => ({
+    default: module.PainelPage,
+  })),
+);
+
 const RecordIndexPage = lazy(() =>
   import('~/pages/object-record/RecordIndexPage').then((module) => ({
     default: module.RecordIndexPage,
@@ -156,6 +165,15 @@ const createWorkspaceAppRouter = (
               }
             />
             <Route element={<MainAppLayoutWithSidePanel />}>
+              {/* arqcrm */}
+              <Route
+                path="/painel"
+                element={
+                  <LazyRoute>
+                    <ArqcrmPainelPage />
+                  </LazyRoute>
+                }
+              />
               <Route
                 path={indexAppPath.getIndexAppPath()}
                 element={<RecordIndexSkeletonLoader />}
