@@ -147,10 +147,16 @@ export const PainelContent = () => {
     0,
   );
 
+  // Enquanto carrega, os componentes recebem vazio e cada um mostra "nenhum
+  // registro ainda". Numa conexão lenta isso são vários segundos afirmando que
+  // o escritório não tem nada — pior que um espaço em branco.
+  const estaCarregando = metrics.isLoading || detalhes.isLoading;
+
+  const CARREGANDO = 'Carregando…';
+
+  const funil = detalhes.funil;
   const conversao =
-    metrics.funnel[0].value > 0
-      ? (metrics.funnel[4].value / metrics.funnel[0].value) * 100
-      : 0;
+    funil[0].value > 0 ? (funil[4].value / funil[0].value) * 100 : 0;
 
   const fatias = detalhes.propostasPorStatus
     .map((item) => {
@@ -223,6 +229,11 @@ export const PainelContent = () => {
             </StyledPanelHint>
           </StyledPanelHeader>
           <FunnelChart
+            emptyMessage={
+              estaCarregando
+                ? CARREGANDO
+                : 'Nenhum lead ainda. O funil aparece assim que o primeiro contato entrar.'
+            }
             colors={[
               themeCssVariables.color.blue,
               themeCssVariables.color.turquoise,
@@ -230,7 +241,7 @@ export const PainelContent = () => {
               themeCssVariables.color.yellow,
               themeCssVariables.color.purple,
             ]}
-            stages={metrics.funnel}
+            stages={funil}
           />
         </StyledPanel>
 
@@ -243,7 +254,9 @@ export const PainelContent = () => {
           </StyledPanelHeader>
           <DonutChart
             centerLabel="propostas"
-            emptyMessage="Nenhuma proposta criada ainda."
+            emptyMessage={
+              estaCarregando ? CARREGANDO : 'Nenhuma proposta criada ainda.'
+            }
             formatValue={(valor) => String(valor)}
             slices={fatias}
           />
@@ -266,6 +279,11 @@ export const PainelContent = () => {
           />
         </StyledPanelHeader>
         <AreaChart
+          emptyMessage={
+            estaCarregando
+              ? CARREGANDO
+              : 'Ainda não há parcelas suficientes para desenhar a curva. Ela aparece assim que houver ao menos dois meses com movimento.'
+          }
           formatAxis={brlCurto}
           formatValue={brl}
           labels={detalhes.meses}
@@ -294,7 +312,11 @@ export const PainelContent = () => {
           </StyledPanelTitleGroup>
         </StyledPanelHeader>
         <AttentionList
-          emptyMessage="Nada parado. Nenhuma parcela vencida e nenhuma proposta sem resposta."
+          emptyMessage={
+            estaCarregando
+              ? CARREGANDO
+              : 'Nada parado. Nenhuma parcela vencida e nenhuma proposta sem resposta.'
+          }
           items={detalhes.atencao}
         />
       </StyledPanel>

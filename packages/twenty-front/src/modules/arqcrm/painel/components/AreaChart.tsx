@@ -41,6 +41,7 @@ export type AreaChartProps = {
   series: AreaSeries[];
   formatValue: (value: number) => string;
   formatAxis?: (value: number) => string;
+  emptyMessage?: string;
 };
 
 const StyledWrapper = styled.div`
@@ -112,6 +113,7 @@ export const AreaChart = ({
   series,
   formatValue,
   formatAxis,
+  emptyMessage = 'Ainda não há parcelas suficientes para desenhar a curva. Ela aparece assim que houver ao menos dois meses com movimento.',
 }: AreaChartProps) => {
   // `useId` devolve algo como ":r3:" e os dois-pontos quebram a referência
   // `url(#id)` em alguns navegadores. Remover é mais barato que descobrir isso
@@ -160,12 +162,7 @@ export const AreaChart = ({
   }, [labels.length, series]);
 
   if (!temDado) {
-    return (
-      <StyledEmpty>
-        Ainda não há parcelas suficientes para desenhar a curva. Ela aparece
-        assim que houver ao menos dois meses com movimento.
-      </StyledEmpty>
-    );
+    return <StyledEmpty>{emptyMessage}</StyledEmpty>;
   }
 
   const rotuloEixo = formatAxis ?? formatValue;
@@ -190,6 +187,10 @@ export const AreaChart = ({
         onMouseLeave={() => setIndiceAtivo(null)}
         onMouseMove={aoMover}
         role="img"
+        // Inline e não só no CSS: a regra em folha de estilo não pegou, e o
+        // sintoma é discreto o bastante (um "R$" que vira "₹$") para passar
+        // despercebido numa demonstração.
+        style={{ fontVariantLigatures: 'none' }}
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
       >
         <defs>

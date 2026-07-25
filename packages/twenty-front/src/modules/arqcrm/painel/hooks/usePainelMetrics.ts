@@ -2,7 +2,6 @@ import { type RecordGqlFieldsAggregate } from '@/object-record/graphql/types/Rec
 import { useAggregateRecords } from '@/object-record/hooks/useAggregateRecords';
 import { type RecordGqlOperationFilter } from 'twenty-shared/types';
 import { AggregateOperations } from '~/generated-metadata/graphql';
-import { type FunnelStage } from '@/arqcrm/funnel/utils/funnelSegmentPath';
 
 // Métricas agregadas do painel.
 //
@@ -42,7 +41,6 @@ import { type FunnelStage } from '@/arqcrm/funnel/utils/funnelSegmentPath';
 
 const CONTAGEM: RecordGqlFieldsAggregate = { id: [AggregateOperations.COUNT] };
 const CONTAGEM_E_CONTRATADO: RecordGqlFieldsAggregate = {
-  id: [AggregateOperations.COUNT],
   valorContratado: [AggregateOperations.SUM],
 };
 const SOMA_RECEBIDO: RecordGqlFieldsAggregate = { valorRecebido: [AggregateOperations.SUM] };
@@ -52,8 +50,6 @@ const CONTAGEM_E_VALOR: RecordGqlFieldsAggregate = {
   valor: [AggregateOperations.SUM],
 };
 
-const FILTRO_ENVIADA: RecordGqlOperationFilter = { enviadaEm: { is: 'NOT_NULL' } };
-const FILTRO_APROVADA: RecordGqlOperationFilter = { status: { eq: 'APROVADA' } };
 const FILTRO_EM_ANDAMENTO: RecordGqlOperationFilter = { status: { eq: 'EM_ANDAMENTO' } };
 const FILTRO_RECEBIDA: RecordGqlOperationFilter = { status: { eq: 'RECEBIDA' } };
 const FILTRO_VENCIDA: RecordGqlOperationFilter = { status: { eq: 'VENCIDA' } };
@@ -71,7 +67,6 @@ const somarComo = (data: AggregateShape | undefined, campo: string): number =>
 
 export type PainelMetrics = {
   isLoading: boolean;
-  funnel: FunnelStage[];
   receitaContratada: number;
   receitaRecebida: number;
   receitaEmAberto: number;
@@ -81,28 +76,6 @@ export type PainelMetrics = {
 };
 
 export const usePainelMetrics = (): PainelMetrics => {
-  const leads = useAggregateRecords<AggregateShape>({
-    objectNameSingular: 'opportunity',
-    recordGqlFieldsAggregate: CONTAGEM,
-  });
-
-  const propostas = useAggregateRecords<AggregateShape>({
-    objectNameSingular: 'proposta',
-    recordGqlFieldsAggregate: CONTAGEM,
-  });
-
-  const propostasEnviadas = useAggregateRecords<AggregateShape>({
-    filter: FILTRO_ENVIADA,
-    objectNameSingular: 'proposta',
-    recordGqlFieldsAggregate: CONTAGEM,
-  });
-
-  const propostasAprovadas = useAggregateRecords<AggregateShape>({
-    filter: FILTRO_APROVADA,
-    objectNameSingular: 'proposta',
-    recordGqlFieldsAggregate: CONTAGEM,
-  });
-
   const projetos = useAggregateRecords<AggregateShape>({
     objectNameSingular: 'projeto',
     recordGqlFieldsAggregate: CONTAGEM_E_CONTRATADO,
@@ -133,10 +106,6 @@ export const usePainelMetrics = (): PainelMetrics => {
   });
 
   const isLoading = [
-    leads,
-    propostas,
-    propostasEnviadas,
-    propostasAprovadas,
     projetos,
     projetosEmAndamento,
     recebido,
@@ -145,13 +114,6 @@ export const usePainelMetrics = (): PainelMetrics => {
   ].some((query) => query.loading);
 
   return {
-    funnel: [
-      { label: 'Leads', value: contarComo(leads.data, 'id') },
-      { label: 'Propostas', value: contarComo(propostas.data, 'id') },
-      { label: 'Enviadas', value: contarComo(propostasEnviadas.data, 'id') },
-      { label: 'Aprovadas', value: contarComo(propostasAprovadas.data, 'id') },
-      { label: 'Projetos', value: contarComo(projetos.data, 'id') },
-    ],
     isLoading,
     parcelasVencidas: contarComo(vencidas.data, 'id'),
     projetosAtivos: contarComo(projetosEmAndamento.data, 'id'),

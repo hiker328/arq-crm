@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { isNonEmptyString } from '@sniptt/guards';
 
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import {
@@ -6,6 +7,7 @@ import {
   type RecordGqlOperationGqlRecordFields,
 } from 'twenty-shared/types';
 import { type AttentionItem } from '@/arqcrm/painel/components/AttentionList';
+import { type FunnelStage } from '@/arqcrm/funnel/utils/funnelSegmentPath';
 
 // Dados das visualizações detalhadas do painel: curva de recebíveis, rosca de
 // propostas por status e a lista "precisa de atenção".
@@ -37,6 +39,9 @@ const STATUS_PROPOSTA_ABERTA = ['ENVIADA', 'VISUALIZADA'];
 // Fora do componente pela MESMA razão do usePainelMetrics: `useFindManyRecordsQuery`
 // memoiza o documento GraphQL usando este objeto como dependência. Literal
 // inline = documento novo a cada render = refetch em loop.
+// Só o id: estas duas consultas existem para ler `totalCount`, não os registros.
+const SO_ID: RecordGqlOperationGqlRecordFields = { id: true };
+
 const CAMPOS_PROPOSTA: RecordGqlOperationGqlRecordFields = {
   enviadaEm: true,
   id: true,
@@ -116,6 +121,7 @@ const diasDesde = (data: string | null): number | null => {
 
 export type PainelDetalhes = {
   isLoading: boolean;
+  funil: FunnelStage[];
   meses: string[];
   recebidoPorMes: number[];
   previstoPorMes: number[];
@@ -154,8 +160,26 @@ export const usePainelDetalhes = (
     };
   }, [mesesNaCurva]);
 
+  // O funil sai daqui, e não de agregações, de propósito. O `useAggregateRecords`
+  // devolvia zero para `opportunity` e `proposta` enquanto funcionava para
+  // `projeto` e `parcela` — mesma query, mesmo formato, resultado diferente, sem
+  // erro em lugar nenhum. Perseguir isso custava mais que o ganho: `totalCount`
+  // do findMany já vem correto, já é buscado para a rosca, e usar a mesma fonte
+  // garante que o funil e a rosca nunca discordem na tela.
+  const leads = useFindManyRecords({
+    limit: 1,
+    objectNameSingular: 'opportunity',
+    recordGqlFields: SO_ID,
+  });
+
+  const projetosContagem = useFindManyRecords({
+    limit: 1,
+    objectNameSingular: 'projeto',
+    recordGqlFields: SO_ID,
+  });
+
   const propostas = useFindManyRecords<PropostaLeve>({
-    limit: 200,
+    limit: 500,
     objectNameSingular: 'proposta',
     recordGqlFields: CAMPOS_PROPOSTA,
   });
@@ -258,14 +282,35 @@ export const usePainelDetalhes = (
         value: formatarBRL(micros(proposta.valorTotal)),
       }));
 
+    // Enviadas e aprovadas são contadas sobre os registros carregados (limite de
+    // 500). Um escritório do porte alvo não chega perto disso; se um dia chegar,
+    // estes dois números param de crescer antes dos outros e o funil mente.
+    const enviadas = propostas.records.filter((p) =>
+      isNonEmptyString(p.enviadaEm),
+    ).length;
+    const aprovadas = propostas.records.filter(
+      (p) => p.status === 'APROVADA',
+    ).length;
+
     return {
+      funil: [
+        { label: 'Leads', value: leads.totalCount ?? 0 },
+        { label: 'Propostas', value: propostas.totalCount ?? 0 },
+        { label: 'Enviadas', value: enviadas },
+        { label: 'Aprovadas', value: aprovadas },
+        { label: 'Projetos', value: projetosContagem.totalCount ?? 0 },
+      ],
       aReceberMicros: aReceber.records.reduce(
         (soma, parcela) => soma + micros(parcela.valor),
         0,
       ),
       atencao: [...vencidas, ...paradas].slice(0, LIMITE_ATENCAO),
       isLoading:
-        propostas.loading || recebidas.loading || aReceber.loading,
+        propostas.loading ||
+        recebidas.loading ||
+        aReceber.loading ||
+        leads.loading ||
+        projetosContagem.loading,
       meses,
       previstoPorMes,
       propostasPorStatus: [...porStatus.entries()].map(([status, dados]) => ({
@@ -279,9 +324,14 @@ export const usePainelDetalhes = (
     aReceber.loading,
     aReceber.records,
     chaves,
+    leads.loading,
+    leads.totalCount,
     meses,
+    projetosContagem.loading,
+    projetosContagem.totalCount,
     propostas.loading,
     propostas.records,
+    propostas.totalCount,
     recebidas.loading,
     recebidas.records,
   ]);
