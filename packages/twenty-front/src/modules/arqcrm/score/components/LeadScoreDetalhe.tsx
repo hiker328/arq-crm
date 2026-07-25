@@ -171,10 +171,14 @@ export const LeadScoreDetalhe = ({ lead }: LeadScoreDetalheProps) => {
   const positivos = lead.fatores?.positivos ?? [];
   const negativos = lead.fatores?.negativos ?? [];
 
+  // Valor absoluto: as penalidades vêm negativas do domínio, e sem isto elas
+  // nunca disputariam o máximo — uma penalidade de 20 apareceria menor que um
+  // ganho de 8, invertendo justamente o peso relativo que a barra existe para
+  // mostrar.
   const maximo = Math.max(
     1,
-    ...positivos.map((fator) => fator.pontos),
-    ...negativos.map((fator) => fator.pontos),
+    ...positivos.map((fator) => Math.abs(fator.pontos)),
+    ...negativos.map((fator) => Math.abs(fator.pontos)),
   );
 
   const calculadoEm = dataCurta(lead.fatores?.calculadoEm ?? null);

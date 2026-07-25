@@ -106,6 +106,12 @@ export type FatoresPanelProps = {
   vazio: string;
 };
 
+// O domínio já guarda a penalidade como número NEGATIVO (`pontos: -pontos`).
+// Somar o sinal por cima disso imprimia "−-10", e a largura da barra saía
+// negativa, o que não desenha nada. O sinal é decoração da seção; o número que
+// se lê e se mede é sempre o valor absoluto.
+const magnitude = (pontos: number) => Math.abs(pontos);
+
 export const FatoresPanel = ({
   titulo,
   fatores,
@@ -119,7 +125,7 @@ export const FatoresPanel = ({
       {titulo}
       <StyledPontos cor={cor}>
         {fatores.length > 0 &&
-          `${sinal}${fatores.reduce((soma, fator) => soma + fator.pontos, 0)}`}
+          `${sinal}${fatores.reduce((soma, fator) => soma + magnitude(fator.pontos), 0)}`}
       </StyledPontos>
     </StyledTitulo>
 
@@ -138,13 +144,13 @@ export const FatoresPanel = ({
               <StyledTexto>{fator.texto}</StyledTexto>
               <StyledPontos cor={cor}>
                 {sinal}
-                {fator.pontos}
+                {magnitude(fator.pontos)}
               </StyledPontos>
             </StyledLinha>
             <StyledTrilho>
               <StyledBarra
                 animate={{
-                  width: `${maximo > 0 ? (fator.pontos / maximo) * 100 : 0}%`,
+                  width: `${maximo > 0 ? (magnitude(fator.pontos) / maximo) * 100 : 0}%`,
                 }}
                 initial={{ width: 0 }}
                 style={{ background: cor }}
