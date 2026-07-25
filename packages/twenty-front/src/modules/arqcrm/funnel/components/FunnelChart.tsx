@@ -113,7 +113,6 @@ type FunnelSegmentShapeProps = {
   index: number;
   paths: string[];
   color: string;
-  width: number;
   offsetX: number;
   isHovered: boolean;
   isDimmed: boolean;
@@ -123,7 +122,6 @@ const FunnelSegmentShape = ({
   index,
   paths,
   color,
-  width,
   offsetX,
   isHovered,
   isDimmed,
@@ -145,16 +143,23 @@ const FunnelSegmentShape = ({
     dim.set(isDimmed ? 0.35 : 1);
   }, [dim, isDimmed]);
 
+  // O posicionamento horizontal fica num <g> ESTÁTICO por fora, com o
+  // `transform` no atributo, e a animação num <g> por dentro, com o transform
+  // no style. Os dois não podem viver no mesmo elemento: o framer-motion
+  // escreve `transform` em `style`, e em SVG o transform do style SOBRESCREVE o
+  // do atributo. Com os dois juntos, o translate era descartado e os cinco
+  // segmentos eram desenhados empilhados em x=0 — o funil virava um borrão
+  // colorido no primeiro estágio e os outros sumiam.
   return (
-    <motion.g
-      style={{
-        opacity: dim,
-        scaleX: grow,
-        transformBox: 'fill-box',
-        transformOrigin: 'left center',
-      }}
-      transform={`translate(${offsetX}, 0)`}
-    >
+    <g transform={`translate(${offsetX}, 0)`}>
+      <motion.g
+        style={{
+          opacity: dim,
+          scaleX: grow,
+          transformBox: 'fill-box',
+          transformOrigin: 'left center',
+        }}
+      >
       {paths.map((path, layer) => {
         const isInnermost = layer === paths.length - 1;
         // A opacidade crescente por camada é o que cria a leitura de volume.
@@ -185,8 +190,8 @@ const FunnelSegmentShape = ({
           />
         );
       })}
-      <title>{`${width}`}</title>
-    </motion.g>
+      </motion.g>
+    </g>
   );
 };
 
@@ -259,7 +264,6 @@ export const FunnelChart = ({
               key={segment.stage.label}
               offsetX={(segmentWidth + GAP) * segment.index}
               paths={paths}
-              width={segmentWidth}
             />
           );
         })}
