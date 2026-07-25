@@ -40,6 +40,10 @@ const StyledCard = styled(motion.article)`
   /* position:relative + z-index só valem enquanto arrasta; sem isso o cartão
      passa POR BAIXO das colunas vizinhas ao atravessá-las. */
   position: relative;
+  /* Sem isto, arrastar seleciona o texto do cartão e dos vizinhos em vez de
+     mover — o gesto vira marcação de texto azul atravessando o quadro. */
+  user-select: none;
+  -webkit-user-select: none;
 
   &:hover {
     border-color: ${themeCssVariables.border.color.medium};
