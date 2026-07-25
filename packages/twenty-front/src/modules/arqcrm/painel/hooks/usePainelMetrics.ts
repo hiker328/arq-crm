@@ -1,4 +1,6 @@
+import { type RecordGqlFieldsAggregate } from '@/object-record/graphql/types/RecordGqlFieldsAggregate';
 import { useAggregateRecords } from '@/object-record/hooks/useAggregateRecords';
+import { type RecordGqlOperationFilter } from 'twenty-shared/types';
 import { type FunnelStage } from '@/arqcrm/funnel/utils/funnelSegmentPath';
 
 // Métricas agregadas do painel.
@@ -22,6 +24,31 @@ import { type FunnelStage } from '@/arqcrm/funnel/utils/funnelSegmentPath';
 // quando o objeto não existe — e `skip` NÃO evita o lançamento, porque ele
 // acontece antes. Quem garante a condição é o componente pai; ver
 // `useIsDomainInstalled` e `PainelPage`.
+//
+// ⚠️ As constantes abaixo estão FORA do componente por necessidade, não por
+// estilo. `useAggregateRecordsQuery` memoiza o documento GraphQL usando o
+// objeto `recordGqlFieldsAggregate` como dependência: passar um literal inline
+// cria uma referência nova a cada render, o Apollo recebe uma query nova toda
+// vez, e o resultado nunca assenta — todo número fica zerado para sempre. Foi
+// exatamente esse o bug que zerou o painel inteiro na primeira subida.
+
+const CONTAGEM: RecordGqlFieldsAggregate = { id: ['count'] };
+const CONTAGEM_E_CONTRATADO: RecordGqlFieldsAggregate = {
+  id: ['count'],
+  valorContratado: ['sum'],
+};
+const SOMA_RECEBIDO: RecordGqlFieldsAggregate = { valorRecebido: ['sum'] };
+const SOMA_VALOR: RecordGqlFieldsAggregate = { valor: ['sum'] };
+const CONTAGEM_E_VALOR: RecordGqlFieldsAggregate = { id: ['count'], valor: ['sum'] };
+
+const FILTRO_ENVIADA: RecordGqlOperationFilter = { enviadaEm: { is: 'NOT_NULL' } };
+const FILTRO_APROVADA: RecordGqlOperationFilter = { status: { eq: 'APROVADA' } };
+const FILTRO_EM_ANDAMENTO: RecordGqlOperationFilter = { status: { eq: 'EM_ANDAMENTO' } };
+const FILTRO_RECEBIDA: RecordGqlOperationFilter = { status: { eq: 'RECEBIDA' } };
+const FILTRO_VENCIDA: RecordGqlOperationFilter = { status: { eq: 'VENCIDA' } };
+const FILTRO_EM_ABERTO: RecordGqlOperationFilter = {
+  status: { in: ['PREVISTA', 'A_VENCER', 'VENCIDA'] },
+};
 
 type AggregateShape = { [field: string]: { [op: string]: number | undefined } };
 
@@ -45,53 +72,53 @@ export type PainelMetrics = {
 export const usePainelMetrics = (): PainelMetrics => {
   const leads = useAggregateRecords<AggregateShape>({
     objectNameSingular: 'opportunity',
-    recordGqlFieldsAggregate: { id: ['count'] },
+    recordGqlFieldsAggregate: CONTAGEM,
   });
 
   const propostas = useAggregateRecords<AggregateShape>({
     objectNameSingular: 'proposta',
-    recordGqlFieldsAggregate: { id: ['count'] },
+    recordGqlFieldsAggregate: CONTAGEM,
   });
 
   const propostasEnviadas = useAggregateRecords<AggregateShape>({
-    filter: { enviadaEm: { is: 'NOT_NULL' } },
+    filter: FILTRO_ENVIADA,
     objectNameSingular: 'proposta',
-    recordGqlFieldsAggregate: { id: ['count'] },
+    recordGqlFieldsAggregate: CONTAGEM,
   });
 
   const propostasAprovadas = useAggregateRecords<AggregateShape>({
-    filter: { status: { eq: 'APROVADA' } },
+    filter: FILTRO_APROVADA,
     objectNameSingular: 'proposta',
-    recordGqlFieldsAggregate: { id: ['count'] },
+    recordGqlFieldsAggregate: CONTAGEM,
   });
 
   const projetos = useAggregateRecords<AggregateShape>({
     objectNameSingular: 'projeto',
-    recordGqlFieldsAggregate: { id: ['count'], valorContratado: ['sum'] },
+    recordGqlFieldsAggregate: CONTAGEM_E_CONTRATADO,
   });
 
   const projetosEmAndamento = useAggregateRecords<AggregateShape>({
-    filter: { status: { eq: 'EM_ANDAMENTO' } },
+    filter: FILTRO_EM_ANDAMENTO,
     objectNameSingular: 'projeto',
-    recordGqlFieldsAggregate: { id: ['count'] },
+    recordGqlFieldsAggregate: CONTAGEM,
   });
 
   const recebido = useAggregateRecords<AggregateShape>({
-    filter: { status: { eq: 'RECEBIDA' } },
+    filter: FILTRO_RECEBIDA,
     objectNameSingular: 'parcela',
-    recordGqlFieldsAggregate: { valorRecebido: ['sum'] },
+    recordGqlFieldsAggregate: SOMA_RECEBIDO,
   });
 
   const emAberto = useAggregateRecords<AggregateShape>({
-    filter: { status: { in: ['PREVISTA', 'A_VENCER', 'VENCIDA'] } },
+    filter: FILTRO_EM_ABERTO,
     objectNameSingular: 'parcela',
-    recordGqlFieldsAggregate: { valor: ['sum'] },
+    recordGqlFieldsAggregate: SOMA_VALOR,
   });
 
   const vencidas = useAggregateRecords<AggregateShape>({
-    filter: { status: { eq: 'VENCIDA' } },
+    filter: FILTRO_VENCIDA,
     objectNameSingular: 'parcela',
-    recordGqlFieldsAggregate: { id: ['count'], valor: ['sum'] },
+    recordGqlFieldsAggregate: CONTAGEM_E_VALOR,
   });
 
   const isLoading = [

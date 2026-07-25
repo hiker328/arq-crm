@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import {
+  type RecordGqlOperationFilter,
+  type RecordGqlOperationGqlRecordFields,
+} from 'twenty-shared/types';
 import { type AttentionItem } from '@/arqcrm/painel/components/AttentionList';
 
 // Dados das visualizações detalhadas do painel: curva de recebíveis, rosca de
@@ -28,6 +32,32 @@ const ROTULO_MES = [
 
 const STATUS_A_RECEBER = ['PREVISTA', 'A_VENCER', 'VENCIDA'];
 const STATUS_PROPOSTA_ABERTA = ['ENVIADA', 'VISUALIZADA'];
+
+
+// Fora do componente pela MESMA razão do usePainelMetrics: `useFindManyRecordsQuery`
+// memoiza o documento GraphQL usando este objeto como dependência. Literal
+// inline = documento novo a cada render = refetch em loop.
+const CAMPOS_PROPOSTA: RecordGqlOperationGqlRecordFields = {
+  enviadaEm: true,
+  id: true,
+  nome: true,
+  status: true,
+  valorTotal: true,
+};
+
+const CAMPOS_PARCELA: RecordGqlOperationGqlRecordFields = {
+  descricao: true,
+  id: true,
+  recebidaEm: true,
+  status: true,
+  valor: true,
+  valorRecebido: true,
+  vencimentoEm: true,
+};
+
+const FILTRO_A_RECEBER: RecordGqlOperationFilter = {
+  status: { in: STATUS_A_RECEBER },
+};
 
 type Dinheiro = { amountMicros?: number | string | null } | null;
 
@@ -127,43 +157,26 @@ export const usePainelDetalhes = (
   const propostas = useFindManyRecords<PropostaLeve>({
     limit: 200,
     objectNameSingular: 'proposta',
-    recordGqlFields: {
-      enviadaEm: true,
-      id: true,
-      nome: true,
-      status: true,
-      valorTotal: true,
-    },
+    recordGqlFields: CAMPOS_PROPOSTA,
   });
 
+  const filtroRecebidas = useMemo(
+    () => ({ recebidaEm: { gte: inicioIso } }),
+    [inicioIso],
+  );
+
   const recebidas = useFindManyRecords<ParcelaLeve>({
-    filter: { recebidaEm: { gte: inicioIso } },
+    filter: filtroRecebidas,
     limit: 500,
     objectNameSingular: 'parcela',
-    recordGqlFields: {
-      descricao: true,
-      id: true,
-      recebidaEm: true,
-      status: true,
-      valorRecebido: true,
-      vencimentoEm: true,
-      valor: true,
-    },
+    recordGqlFields: CAMPOS_PARCELA,
   });
 
   const aReceber = useFindManyRecords<ParcelaLeve>({
-    filter: { status: { in: STATUS_A_RECEBER } },
+    filter: FILTRO_A_RECEBER,
     limit: 500,
     objectNameSingular: 'parcela',
-    recordGqlFields: {
-      descricao: true,
-      id: true,
-      recebidaEm: true,
-      status: true,
-      valorRecebido: true,
-      vencimentoEm: true,
-      valor: true,
-    },
+    recordGqlFields: CAMPOS_PARCELA,
   });
 
   return useMemo(() => {

@@ -13,8 +13,12 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 // remove a dependência de medição, tira ~100 KB do bundle e evita adicionar uma
 // biblioteca de gráfico redundante ao lado do Nivo já instalado.
 
-const SPARK_WIDTH = 132;
-const SPARK_HEIGHT = 44;
+// A sparkline ocupa a largura inteira do card, abaixo do número, em vez de
+// dividir a linha com ele. Ao lado, ela roubava ~130px e "R$ 120.360" virava
+// "R$ 120...". Empilhado, o valor tem o card todo — e o traço fica maior, que é
+// como as referências (ORION, HubSpot) desenham.
+const SPARK_WIDTH = 240;
+const SPARK_HEIGHT = 36;
 
 const StyledCard = styled(motion.div)`
   background: ${themeCssVariables.background.secondary};
@@ -67,10 +71,9 @@ const StyledIconTile = styled.span<{ tint: string }>`
 `;
 
 const StyledBody = styled.div`
-  align-items: flex-end;
   display: flex;
-  gap: ${themeCssVariables.spacing[3]};
-  justify-content: space-between;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledValueGroup = styled.div`
@@ -82,7 +85,8 @@ const StyledValueGroup = styled.div`
 
 const StyledValue = styled.p`
   color: ${themeCssVariables.font.color.primary};
-  font-size: ${themeCssVariables.font.size.xxl};
+  /* Encolhe em tela estreita em vez de virar reticências: o número é o card. */
+  font-size: clamp(1.25rem, 2.1vw, 1.75rem);
   font-variant-numeric: tabular-nums;
   font-weight: ${themeCssVariables.font.weight.semiBold};
   letter-spacing: -0.03em;
@@ -122,8 +126,10 @@ const StyledHint = styled.span`
 `;
 
 const StyledSpark = styled.svg`
-  flex-shrink: 0;
+  display: block;
+  height: ${SPARK_HEIGHT}px;
   overflow: visible;
+  width: 100%;
 `;
 
 export type StatCardTone = 'neutral' | 'positive' | 'negative' | 'attention';
@@ -255,10 +261,9 @@ export const StatCard = ({
         {paths !== null && (
           <StyledSpark
             aria-hidden="true"
-            height={SPARK_HEIGHT}
+            preserveAspectRatio="none"
             role="presentation"
             viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`}
-            width={SPARK_WIDTH}
           >
             <defs>
               <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
@@ -286,6 +291,10 @@ export const StatCard = ({
                 duration: 0.7,
                 ease: 'easeOut',
               }}
+              // O viewBox é esticado na horizontal (preserveAspectRatio="none")
+              // para a linha ocupar a largura do card. Sem isto a espessura do
+              // traço esticaria junto e ficaria deformada.
+              vectorEffect="non-scaling-stroke"
             />
           </StyledSpark>
         )}
