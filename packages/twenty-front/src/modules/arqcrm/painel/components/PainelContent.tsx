@@ -3,8 +3,8 @@ import { useState } from 'react';
 import {
   IconAlertTriangle,
   IconBuildingSkyscraper,
-  IconCashBanknote,
-  IconHourglass,
+  IconCoins,
+  IconHourglassHigh,
 } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
@@ -179,7 +179,7 @@ export const PainelContent = () => {
         <StatCard
           deltaPercent={variacao(detalhes.recebidoPorMes)}
           hint={`nos últimos ${mesesNaCurva} meses`}
-          icon={<IconCashBanknote size={15} />}
+          icon={<IconCoins size={15} />}
           index={1}
           series={detalhes.recebidoPorMes}
           title="Recebido"
@@ -188,7 +188,7 @@ export const PainelContent = () => {
         />
         <StatCard
           hint="parcelas ainda em aberto"
-          icon={<IconHourglass size={15} />}
+          icon={<IconHourglassHigh size={15} />}
           index={2}
           series={detalhes.previstoPorMes}
           title="A receber"
