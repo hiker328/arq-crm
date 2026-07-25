@@ -1,11 +1,16 @@
 import { styled } from '@linaria/react';
-import { motion } from 'framer-motion';
-import { type DragEvent } from 'react';
+import { type PanInfo, motion, useDragControls } from 'framer-motion';
+import { useRef } from 'react';
 import { AppPath } from 'twenty-shared/types';
 // IconRuler2 existe no registro interno do twenty-ui mas NÃO é reexportado
 // pelo index.ts — usar quebra o build em MISSING_EXPORT. Conferir ícone só em
 // packages/twenty-ui/src/icon/index.ts.
-import { IconClock, IconLayoutGrid, IconTarget } from 'twenty-ui/icon';
+import {
+  IconClock,
+  IconGripVertical,
+  IconLayoutGrid,
+  IconTarget,
+} from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 import { type LeadDoFunil } from '@/arqcrm/funil/hooks/useFunilLeads';
@@ -32,17 +37,32 @@ const StyledCard = styled(motion.article)`
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
   padding: ${themeCssVariables.spacing[3]};
-  transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease;
+  /* `position: relative` + z-index só valem enquanto arrasta; sem isso o cartão
+     passa POR BAIXO das colunas vizinhas ao atravessá-las. */
+  position: relative;
 
   &:hover {
     border-color: ${themeCssVariables.border.color.medium};
-    box-shadow: ${themeCssVariables.boxShadow.light};
+  }
+`;
+
+const StyledPegador = styled.span`
+  align-items: center;
+  color: ${themeCssVariables.font.color.extraLight};
+  cursor: grab;
+  display: inline-flex;
+  flex-shrink: 0;
+  /* Área de toque maior que o ícone: 16px de alvo é frustrante no tablet. */
+  margin: -6px -4px -6px 0;
+  padding: 6px 4px;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
   }
 
-  &[data-arrastando='true'] {
-    opacity: 0.4;
+  &:hover {
+    color: ${themeCssVariables.font.color.tertiary};
   }
 `;
 
@@ -145,17 +165,6 @@ const StyledInicial = styled.span`
   width: 22px;
 `;
 
-const StyledMover = styled.select`
-  background: ${themeCssVariables.background.transparent.light};
-  border: 1px solid ${themeCssVariables.border.color.light};
-  border-radius: ${themeCssVariables.border.radius.sm};
-  color: ${themeCssVariables.font.color.secondary};
-  font-family: inherit;
-  font-size: ${themeCssVariables.font.size.xs};
-  margin-top: ${themeCssVariables.spacing[1]};
-  padding: 3px 4px;
-  width: 100%;
-`;
 
 const GRADE_COR: Record<string, { cor: string; fundo: string }> = {
   A: { cor: themeCssVariables.color.green, fundo: themeCssVariables.color.green10 },
@@ -188,13 +197,9 @@ export type LeadCardProps = {
   rotuloDeOrigem: (valor: string | null) => string | null;
   rotuloDeTipo: (valor: string | null) => string | null;
   isArrastando: boolean;
-  onDragStart: (evento: DragEvent<HTMLElement>) => void;
-  onDragEnd: () => void;
-  /** Etapas disponíveis, para o seletor de mover — o caminho que funciona em toque. */
-  etapas: { value: string; label: string }[];
-  onMover: (paraEtapa: string) => void;
-  /** Em telas de toque o arrasto HTML5 não existe; o seletor aparece no lugar. */
-  mostrarSeletor: boolean;
+  onArrastoInicio: () => void;
+  /** Recebe o ponto onde o cartão foi solto, em coordenadas de viewport. */
+  onArrastoFim: (ponto: { x: number; y: number }) => void;
 };
 
 export const LeadCard = ({
@@ -202,13 +207,15 @@ export const LeadCard = ({
   rotuloDeOrigem,
   rotuloDeTipo,
   isArrastando,
-  onDragStart,
-  onDragEnd,
-  etapas,
-  onMover,
-  mostrarSeletor,
+  onArrastoInicio,
+  onArrastoFim,
 }: LeadCardProps) => {
   const navigateApp = useNavigateApp();
+  const controles = useDragControls();
+
+  // O arrasto termina disparando um clique no cartão. Sem esta trava, soltar o
+  // cartão numa coluna abriria o registro logo em seguida.
+  const acabouDeArrastar = useRef(false);
 
   const dias = diasDesde(lead.ultimoContatoEm);
   const grade = lead.leadGrade ? GRADE_COR[lead.leadGrade] : undefined;
@@ -224,21 +231,66 @@ export const LeadCard = ({
   return (
     <StyledCard
       animate={{ opacity: 1, y: 0 }}
-      data-arrastando={isArrastando}
-      draggable
+      // `drag` do framer-motion em vez do arrasto nativo do HTML5. O nativo não
+      // desenhava fantasma nenhum aqui: o navegador não gera a imagem de
+      // arrasto quando o elemento tem `transform`, e o framer-motion aplica
+      // transform em todo componente `motion`. Aqui o cartão de verdade se
+      // move, o que além de resolver o sintoma funciona em toque — o arrasto
+      // nativo não existe em tela de toque, e o arquiteto usa tablet em obra.
+      drag
+      dragControls={controles}
+      dragElastic={0.12}
+      // Só o pegador inicia o arrasto. Se o cartão inteiro arrastasse, rolar a
+      // coluna com o dedo viraria arrasto, e o clique para abrir o registro
+      // ficaria ambíguo.
+      dragListener={false}
+      dragMomentum={false}
+      // Volta sozinho para o lugar. Quem move o cartão de coluna é o servidor
+      // respondendo, não a posição em que o dedo soltou — se a gravação falha,
+      // o cartão volta e conta a verdade.
+      dragSnapToOrigin
       initial={{ opacity: 0, y: 6 }}
-      onClick={() =>
+      // `layout` faz o cartão deslizar até a posição nova quando a etapa muda,
+      // em vez de sumir de uma coluna e aparecer na outra.
+      layout
+      onClick={() => {
+        if (acabouDeArrastar.current) {
+          acabouDeArrastar.current = false;
+
+          return;
+        }
+
         navigateApp(AppPath.RecordShowPage, {
           objectNameSingular: 'opportunity',
           objectRecordId: lead.id,
-        })
-      }
-      onDragEnd={onDragEnd}
-      onDragStart={onDragStart}
+        });
+      }}
+      onDragEnd={(_evento, info: PanInfo) => {
+        acabouDeArrastar.current = true;
+        onArrastoFim(info.point);
+      }}
+      onDragStart={onArrastoInicio}
+      style={{ zIndex: isArrastando ? 50 : 1 }}
       transition={{ duration: 0.2 }}
+      whileDrag={{
+        boxShadow: themeCssVariables.boxShadow.strong,
+        cursor: 'grabbing',
+        // Inclinação de 1.5° é o detalhe que faz o cartão parecer levantado da
+        // pilha em vez de deslizando no plano. Vem das referências.
+        rotate: -1.5,
+        scale: 1.03,
+      }}
     >
       <StyledTopo>
         <StyledNome title={lead.name ?? ''}>{lead.name ?? 'Sem nome'}</StyledNome>
+        <StyledPegador
+          aria-label="Arrastar para outra etapa"
+          onClick={(evento) => evento.stopPropagation()}
+          onPointerDown={(evento) => controles.start(evento)}
+          title="Arraste para mover de etapa"
+        >
+          <IconGripVertical size={15} />
+        </StyledPegador>
         {grade !== undefined && (
           <StyledGrade
             cor={grade.cor}
@@ -296,25 +348,6 @@ export const LeadCard = ({
         )}
       </StyledRodape>
 
-      {mostrarSeletor && (
-        // Arrastar e soltar do HTML5 não existe em toque, e o arquiteto usa
-        // tablet em obra — é requisito declarado, não hipótese. Um <select>
-        // nativo é feio comparado a um menu sob medida, mas funciona em toque,
-        // é acessível por teclado e leitor de tela, e custa dez linhas. Trocar
-        // por um menu próprio é melhoria, não pré-requisito.
-        <StyledMover
-          aria-label={`Mover ${lead.name ?? 'lead'} para outra etapa`}
-          onChange={(evento) => onMover(evento.target.value)}
-          onClick={(evento) => evento.stopPropagation()}
-          value={lead.stage ?? ''}
-        >
-          {etapas.map((etapa) => (
-            <option key={etapa.value} value={etapa.value}>
-              {etapa.label}
-            </option>
-          ))}
-        </StyledMover>
-      )}
     </StyledCard>
   );
 };

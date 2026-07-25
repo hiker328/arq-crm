@@ -1,28 +1,40 @@
 import { styled } from '@linaria/react';
-import { useMemo, useState } from 'react';
+import { LayoutGroup } from 'framer-motion';
+import { useCallback, useRef, useState } from 'react';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 import { LeadCard } from '@/arqcrm/funil/components/LeadCard';
 import { useFunilLeads } from '@/arqcrm/funil/hooks/useFunilLeads';
-import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
 
 // Quadro do funil.
 //
 // Substitui o kanban nativo do Twenty, que o cliente rejeitou. As colunas vêm
 // do metadado — renomear uma etapa nas configurações renomeia a coluna.
 //
-// Arrastar e soltar é HTML5 nativo, como na referência. A parte que a
-// referência NÃO tem, e que é metade do trabalho: persistir. Soltar o cartão
-// grava a etapa no servidor com atualização otimista; a referência só mexe num
-// array em memória.
+// O arrasto é o `drag` do framer-motion, não o do HTML5 como na referência.
+// Dois motivos, o segundo mais importante que o primeiro:
+//
+//   1. O arrasto nativo não desenhava fantasma nenhum. O navegador não gera a
+//      imagem de arrasto quando o elemento tem `transform`, e todo componente
+//      `motion` tem. O cartão trocava de coluna ao soltar, mas nada seguia o
+//      cursor — parecia quebrado mesmo funcionando.
+//   2. Arrasto nativo do HTML5 não existe em tela de toque. Com ponteiro, o
+//      mesmo código serve mouse e dedo, e o seletor de etapa que existia como
+//      alternativa para tablet deixou de ser necessário.
+//
+// A parte que a referência NÃO tem, e que é metade do trabalho: persistir.
+// Soltar grava a etapa no servidor com atualização otimista; a referência só
+// mexe num array em memória.
 
-const MOSTRA_SELETOR_ATE = 1024;
-
-const StyledQuadro = styled.div`
+const StyledQuadro = styled.div<{ isArrastandoAlgo: boolean }>`
   display: flex;
   gap: ${themeCssVariables.spacing[3]};
   min-height: 0;
-  overflow-x: auto;
+  /* Enquanto um cartão está sendo arrastado o recorte precisa sumir, senão o
+     cartão é cortado ao sair da coluna e o arrasto parece bugado. Ninguém rola
+     o quadro com o cartão na mão, então trocar por `visible` durante o gesto
+     não custa nada — e a posição de rolagem é preservada. */
+  overflow-x: ${({ isArrastandoAlgo }) => (isArrastandoAlgo ? 'visible' : 'auto')};
   padding-bottom: ${themeCssVariables.spacing[2]};
 
   /* Barra de rolagem discreta: o quadro rola na horizontal por natureza e uma
@@ -87,12 +99,13 @@ const StyledContagem = styled.span`
   padding: 1px 7px;
 `;
 
-const StyledLista = styled.div`
+const StyledLista = styled.div<{ isArrastandoAlgo: boolean }>`
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
   min-height: 60px;
-  overflow-y: auto;
+  /* Mesmo motivo do quadro: recorte vertical cortaria o cartão arrastado. */
+  overflow-y: ${({ isArrastandoAlgo }) => (isArrastandoAlgo ? 'visible' : 'auto')};
 `;
 
 const StyledVazio = styled.p`
@@ -112,29 +125,48 @@ const StyledEstado = styled.div`
   min-height: 240px;
 `;
 
-// Formato do arrasto: só o id. Serializar o registro inteiro no dataTransfer
-// funciona e é o que a referência faz, mas transporta uma cópia que pode estar
-// velha quando o soltar acontece. O id é sempre verdade.
-const TIPO_ARRASTO = 'text/plain';
-
 export const FunilKanban = () => {
   const { colunas, isLoading, moverLead, rotuloDeOrigem, rotuloDeTipo } =
     useFunilLeads();
-  const isMobile = useIsMobile();
 
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [colunaAlvo, setColunaAlvo] = useState<string | null>(null);
 
-  // O seletor de etapa aparece quando não dá para arrastar: toque, ou tela
-  // estreita onde arrastar entre colunas exige rolagem horizontal simultânea —
-  // um gesto que quase ninguém consegue fazer.
-  const mostrarSeletor =
-    isMobile ||
-    (typeof window !== 'undefined' && window.innerWidth < MOSTRA_SELETOR_ATE);
+  // Referência a cada coluna para descobrir sobre qual o cartão foi solto.
+  // Medir aqui é seguro: isto é fork-side, com DOM de verdade. A regra de
+  // evitar `getBoundingClientRect` vale para o sandbox de front component da
+  // app, que é outro ambiente e não tem essa API.
+  const colunasRef = useRef(new Map<string, HTMLElement>());
 
-  const etapas = useMemo(
-    () => colunas.map(({ value, label }) => ({ label, value })),
-    [colunas],
+  const registrarColuna = useCallback(
+    (valor: string) => (elemento: HTMLElement | null) => {
+      if (elemento === null) {
+        colunasRef.current.delete(valor);
+      } else {
+        colunasRef.current.set(valor, elemento);
+      }
+    },
+    [],
+  );
+
+  const colunaSobOPonteiro = useCallback(
+    (ponto: { x: number; y: number }) => {
+      for (const [valor, elemento] of colunasRef.current) {
+        const area = elemento.getBoundingClientRect();
+
+        if (
+          ponto.x >= area.left &&
+          ponto.x <= area.right &&
+          ponto.y >= area.top &&
+          ponto.y <= area.bottom
+        ) {
+          return valor;
+        }
+      }
+
+      return null;
+    },
+    [],
   );
 
   const total = colunas.reduce((soma, coluna) => soma + coluna.leads.length, 0);
@@ -152,41 +184,46 @@ export const FunilKanban = () => {
     );
   }
 
-  const aoSoltar = async (etapaDestino: string) => {
-    const leadId = arrastando;
-
+  const aoSoltar = async (leadId: string, ponto: { x: number; y: number }) => {
     setArrastando(null);
     setColunaAlvo(null);
 
-    if (leadId === null) return;
+    const destino = colunaSobOPonteiro(ponto);
+
+    // Solto fora de qualquer coluna: `dragSnapToOrigin` já devolveu o cartão ao
+    // lugar e não há nada a gravar.
+    if (destino === null) return;
 
     const origem = colunas.find((coluna) =>
       coluna.leads.some((lead) => lead.id === leadId),
     );
 
-    if (origem?.value === etapaDestino) return;
+    if (origem?.value === destino) return;
 
-    await moverLead(leadId, etapaDestino);
+    await moverLead(leadId, destino);
   };
 
   return (
-    <StyledQuadro>
-      {colunas.map((coluna) => (
-        <StyledColuna
-          isAlvo={colunaAlvo === coluna.value && arrastando !== null}
-          key={coluna.value}
-          onDragLeave={() =>
-            setColunaAlvo((atual) => (atual === coluna.value ? null : atual))
-          }
-          onDragOver={(evento) => {
-            evento.preventDefault();
-            setColunaAlvo(coluna.value);
-          }}
-          onDrop={(evento) => {
-            evento.preventDefault();
-            void aoSoltar(coluna.value);
-          }}
-        >
+    <StyledQuadro
+      isArrastandoAlgo={arrastando !== null}
+      onPointerMove={(evento) => {
+        // O realce da coluna sob o ponteiro é calculado aqui, no contêiner, e
+        // não em cada coluna: durante o arrasto o cartão captura o ponteiro e
+        // as colunas nunca recebem evento próprio.
+        if (arrastando === null) return;
+
+        setColunaAlvo(
+          colunaSobOPonteiro({ x: evento.clientX, y: evento.clientY }),
+        );
+      }}
+    >
+      <LayoutGroup>
+        {colunas.map((coluna) => (
+          <StyledColuna
+            isAlvo={colunaAlvo === coluna.value && arrastando !== null}
+            key={coluna.value}
+            ref={registrarColuna(coluna.value)}
+          >
           <StyledCabecalho>
             <StyledPonto cor={coluna.color} />
             <StyledTituloColuna title={coluna.label}>
@@ -195,38 +232,26 @@ export const FunilKanban = () => {
             <StyledContagem>{coluna.leads.length}</StyledContagem>
           </StyledCabecalho>
 
-          <StyledLista>
+          <StyledLista isArrastandoAlgo={arrastando !== null}>
             {coluna.leads.length === 0 ? (
               <StyledVazio>Nenhum lead aqui</StyledVazio>
             ) : (
               coluna.leads.map((lead) => (
                 <LeadCard
-                  etapas={etapas}
                   isArrastando={arrastando === lead.id}
                   key={lead.id}
                   lead={lead}
-                  mostrarSeletor={mostrarSeletor}
-                  onDragEnd={() => {
-                    setArrastando(null);
-                    setColunaAlvo(null);
-                  }}
-                  onDragStart={(evento) => {
-                    // O Firefox só inicia o arrasto se algo for escrito no
-                    // dataTransfer. O id que vale é o do estado — este aqui
-                    // existe só para o navegador deixar arrastar.
-                    evento.dataTransfer.setData(TIPO_ARRASTO, lead.id);
-                    evento.dataTransfer.effectAllowed = 'move';
-                    setArrastando(lead.id);
-                  }}
-                  onMover={(paraEtapa) => void moverLead(lead.id, paraEtapa)}
+                  onArrastoFim={(ponto) => void aoSoltar(lead.id, ponto)}
+                  onArrastoInicio={() => setArrastando(lead.id)}
                   rotuloDeOrigem={rotuloDeOrigem}
                   rotuloDeTipo={rotuloDeTipo}
                 />
               ))
             )}
           </StyledLista>
-        </StyledColuna>
-      ))}
+          </StyledColuna>
+        ))}
+      </LayoutGroup>
     </StyledQuadro>
   );
 };
