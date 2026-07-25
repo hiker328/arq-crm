@@ -89,8 +89,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # APP_VERSION tem que ser semver: o servidor valida e RECUSA subir se
+          # não for — passar github.sha aqui derrubou o deploy uma vez. O valor
+          # de runtime vem do .env do stack; este é só o rótulo da imagem.
           build-args: |
-            APP_VERSION=${{ github.sha }}
+            APP_VERSION=2.24.3
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
