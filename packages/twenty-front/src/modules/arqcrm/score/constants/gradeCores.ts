@@ -1,5 +1,7 @@
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
+import { tom } from '@/arqcrm/theme/tom';
+
 // Cores da grade, num lugar só.
 //
 // A/B/C/D aparece no cartão do kanban, na fila do lead score e no medidor. Se
@@ -12,11 +14,13 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 export type CorDeGrade = { cor: string; fundo: string };
 
+// O fundo é gerado a partir da cor de identidade, NÃO do token `*10` — ver o
+// porquê em `@/arqcrm/theme/tom`. Com o token, a letra do selo fica invisível.
 export const GRADE_COR: Record<string, CorDeGrade> = {
-  A: { cor: themeCssVariables.color.green, fundo: themeCssVariables.color.green10 },
-  B: { cor: themeCssVariables.color.purple, fundo: themeCssVariables.color.purple10 },
-  C: { cor: themeCssVariables.color.yellow, fundo: themeCssVariables.color.yellow10 },
-  D: { cor: themeCssVariables.color.red, fundo: themeCssVariables.color.red10 },
+  A: { cor: themeCssVariables.color.green, fundo: tom(themeCssVariables.color.green) },
+  B: { cor: themeCssVariables.color.purple, fundo: tom(themeCssVariables.color.purple) },
+  C: { cor: themeCssVariables.color.yellow, fundo: tom(themeCssVariables.color.yellow) },
+  D: { cor: themeCssVariables.color.red, fundo: tom(themeCssVariables.color.red) },
 };
 
 export const GRADE_SEM_COR: CorDeGrade = {

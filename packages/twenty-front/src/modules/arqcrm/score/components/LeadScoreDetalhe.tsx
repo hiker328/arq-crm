@@ -114,7 +114,11 @@ const StyledVazio = styled.div`
 `;
 
 const StyledAviso = styled.p`
-  background: ${themeCssVariables.color.orange10};
+  /* Escrito à mão em vez de chamar o helper: dentro de um template do Linaria a
+     expressão é avaliada em BUILD, e chamada de função importada é a categoria
+     de coisa que falha depois de doze minutos de build. Nos outros usos o tom
+     entra por prop, que é JavaScript comum em tempo de execução. */
+  background: color-mix(in srgb, ${themeCssVariables.color.orange} 18%, transparent);
   border-radius: ${themeCssVariables.border.radius.sm};
   color: ${themeCssVariables.font.color.secondary};
   font-size: ${themeCssVariables.font.size.xs};

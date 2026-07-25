@@ -5,6 +5,7 @@ import { IconChevronRight } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 import { useNavigateApp } from '~/hooks/useNavigateApp';
+import { tom } from '@/arqcrm/theme/tom';
 
 // "Precisa de atenção" — a lista que responde "o que parou?".
 //
@@ -141,8 +142,8 @@ const SEVERITY_COLOR: Record<AttentionSeverity, string> = {
 };
 
 const SEVERITY_TINT: Record<AttentionSeverity, string> = {
-  alta: themeCssVariables.color.red10,
-  media: themeCssVariables.color.orange10,
+  alta: tom(themeCssVariables.color.red),
+  media: tom(themeCssVariables.color.orange),
 };
 
 export const AttentionList = ({ items, emptyMessage }: AttentionListProps) => {

@@ -5,6 +5,8 @@ import { useId, useMemo } from 'react';
 import { IconTrendingDown, IconTrendingUp } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
+import { tom } from '@/arqcrm/theme/tom';
+
 // Card de métrica: valor grande, variação colorida e sparkline com gradiente.
 //
 // Portado da referência de design do cliente. A sparkline usa `d3-shape`, que já
@@ -161,10 +163,10 @@ const TONE_COLOR: Record<StatCardTone, string> = {
 };
 
 const TONE_TINT: Record<StatCardTone, string> = {
-  attention: themeCssVariables.color.orange10,
-  negative: themeCssVariables.color.red10,
-  neutral: themeCssVariables.color.blue10,
-  positive: themeCssVariables.color.green10,
+  attention: tom(themeCssVariables.color.orange),
+  negative: tom(themeCssVariables.color.red),
+  neutral: tom(themeCssVariables.color.blue),
+  positive: tom(themeCssVariables.color.green),
 };
 
 export const StatCard = ({
@@ -223,8 +225,8 @@ export const StatCard = ({
     ? themeCssVariables.color.green
     : themeCssVariables.color.red;
   const deltaTint = deltaEhBom
-    ? themeCssVariables.color.green10
-    : themeCssVariables.color.red10;
+    ? tom(themeCssVariables.color.green)
+    : tom(themeCssVariables.color.red);
 
   return (
     <StyledCard
