@@ -32,7 +32,7 @@ const StyledQuadro = styled.div<{ isArrastandoAlgo: boolean }>`
   min-height: 0;
   /* Enquanto um cartão está sendo arrastado o recorte precisa sumir, senão o
      cartão é cortado ao sair da coluna e o arrasto parece bugado. Ninguém rola
-     o quadro com o cartão na mão, então trocar por `visible` durante o gesto
+     o quadro com o cartão na mão, então trocar por visible durante o gesto
      não custa nada — e a posição de rolagem é preservada. */
   overflow-x: ${({ isArrastandoAlgo }) => (isArrastandoAlgo ? 'visible' : 'auto')};
   padding-bottom: ${themeCssVariables.spacing[2]};

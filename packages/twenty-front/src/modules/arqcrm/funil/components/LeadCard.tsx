@@ -37,7 +37,7 @@ const StyledCard = styled(motion.article)`
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
   padding: ${themeCssVariables.spacing[3]};
-  /* `position: relative` + z-index só valem enquanto arrasta; sem isso o cartão
+  /* position:relative + z-index só valem enquanto arrasta; sem isso o cartão
      passa POR BAIXO das colunas vizinhas ao atravessá-las. */
   position: relative;
 
