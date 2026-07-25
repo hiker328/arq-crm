@@ -1,3 +1,4 @@
+import { OrbeSection } from '@/arqcrm/navegacao/components/OrbeSection';
 import { NavigationDrawerOpenedSection } from '@/navigation-menu-item/display/sections/components/NavigationDrawerOpenedSection';
 import { NavigationDrawerWorkspaceSectionSkeletonLoader } from '@/object-metadata/components/NavigationDrawerWorkspaceSectionSkeletonLoader';
 
@@ -31,6 +32,10 @@ const StyledScrollableItemsContainer = styled.div`
 export const MainNavigationDrawerScrollableItems = () => {
   return (
     <StyledScrollableItemsContainer>
+      {/* arqcrm: as duas telas próprias do ORBE, no topo. Não dá para
+          declará-las no manifesto da app — o item de menu do tipo LINK do
+          Twenty força prefixo https:// e não aceita rota interna. */}
+      <OrbeSection />
       <NavigationDrawerOpenedSection />
       <Suspense fallback={<NavigationDrawerWorkspaceSectionSkeletonLoader />}>
         <FavoritesSectionDispatcher />

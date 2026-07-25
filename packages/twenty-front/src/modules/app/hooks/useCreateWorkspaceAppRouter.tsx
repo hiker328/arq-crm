@@ -27,12 +27,19 @@ import { MainAppLayoutWithSidePanel } from '@/ui/layout/page/components/MainAppL
 import { Verify } from '~/pages/onboarding/Verify';
 import { lazyWithPreload } from '~/utils/lazyWithPreload';
 
-// arqcrm: painel do escritório — tela onde design É o produto.
+// arqcrm: telas onde design É o produto.
 // Ver UPSTREAM.md: este arquivo é uma das poucas edições em arquivo do upstream
-// que o orçamento de divergência permite, e a edição é de UMA linha de rota.
+// que o orçamento de divergência permite. Cada tela custa duas linhas — um
+// import preguiçoso e uma rota — e nada mais deste arquivo é tocado.
 const ArqcrmPainelPage = lazy(() =>
   import('@/arqcrm/painel/components/PainelPage').then((module) => ({
     default: module.PainelPage,
+  })),
+);
+
+const ArqcrmFunilPage = lazy(() =>
+  import('@/arqcrm/funil/components/FunilPage').then((module) => ({
+    default: module.FunilPage,
   })),
 );
 
@@ -171,6 +178,14 @@ const createWorkspaceAppRouter = (
                 element={
                   <LazyRoute>
                     <ArqcrmPainelPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="/funil"
+                element={
+                  <LazyRoute>
+                    <ArqcrmFunilPage />
                   </LazyRoute>
                 }
               />
