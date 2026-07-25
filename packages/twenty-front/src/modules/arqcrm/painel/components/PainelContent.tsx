@@ -104,18 +104,20 @@ const brl = (micros: number) =>
     style: 'currency',
   });
 
-// Eixo do gráfico com números longos vira parede de dígitos. "R$ 120 mil" é
-// mais legível que "R$ 120.000" repetido cinco vezes na vertical.
-const brlCurto = (micros: number) => {
+// Rótulo do eixo SEM o símbolo da moeda, de propósito. Repetir "R$" cinco vezes
+// na vertical é ruído — as referências não fazem isso — e some de vez com um
+// problema chato: a fonte tem uma ligadura que renderiza "R$" como "₹$" dentro
+// de SVG, e ela resistiu tanto à regra em folha de estilo quanto ao style
+// inline. A moeda aparece uma vez, no cabeçalho do painel, e no valor do hover.
+const eixoCurto = (micros: number) => {
   const reais = micros / MICROS_POR_UNIDADE;
 
-  if (reais === 0) return 'R$ 0';
+  if (reais === 0) return '0';
   if (Math.abs(reais) >= 1_000_000)
-    return `R$ ${(reais / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`;
-  if (Math.abs(reais) >= 1_000)
-    return `R$ ${Math.round(reais / 1_000)} mil`;
+    return `${(reais / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`;
+  if (Math.abs(reais) >= 1_000) return `${Math.round(reais / 1_000)} mil`;
 
-  return `R$ ${Math.round(reais)}`;
+  return String(Math.round(reais));
 };
 
 const variacao = (serie: number[]): number | undefined => {
@@ -268,7 +270,7 @@ export const PainelContent = () => {
           <StyledPanelTitleGroup>
             <StyledPanelTitle>Recebíveis</StyledPanelTitle>
             <StyledPanelHint>
-              o que entrou contra o que está previsto, mês a mês
+              o que entrou contra o que está previsto, mês a mês · em reais
             </StyledPanelHint>
           </StyledPanelTitleGroup>
           <PeriodoSegmentado
@@ -284,7 +286,7 @@ export const PainelContent = () => {
               ? CARREGANDO
               : 'Ainda não há parcelas suficientes para desenhar a curva. Ela aparece assim que houver ao menos dois meses com movimento.'
           }
-          formatAxis={brlCurto}
+          formatAxis={eixoCurto}
           formatValue={brl}
           labels={detalhes.meses}
           series={[
