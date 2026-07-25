@@ -4,6 +4,7 @@ import { IconArrowUpRight, IconClock, IconTarget } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 import { FatoresPanel } from '@/arqcrm/score/components/FatoresPanel';
+import { RegistrarContato } from '@/arqcrm/score/components/RegistrarContato';
 import { ScoreGauge } from '@/arqcrm/score/components/ScoreGauge';
 import { type LeadComScore } from '@/arqcrm/score/hooks/useLeadScores';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
@@ -227,6 +228,8 @@ export const LeadScoreDetalhe = ({ lead }: LeadScoreDetalheProps) => {
       )}
 
       <StyledRodape>
+        <RegistrarContato leadId={lead.id} proximaAcaoAtual={lead.proximaAcao} />
+
         {calculadoEm !== null && (
           <StyledCarimbo>Pontuado em {calculadoEm}</StyledCarimbo>
         )}

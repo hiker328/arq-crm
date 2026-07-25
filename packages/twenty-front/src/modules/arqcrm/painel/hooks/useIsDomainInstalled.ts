@@ -12,7 +12,16 @@ import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadat
 // do mesmo componente que faz a verificação derrubaria a página inteira com um
 // erro de metadado. A verificação tem que estar num componente PAI.
 
-const OBJETOS_NECESSARIOS = ['proposta', 'projeto', 'parcela'] as const;
+// `configuracaoScore` entrou aqui junto com o editor de pesos: a tela do lead
+// score consulta esse objeto, e `useObjectMetadataItem` lança quando ele não
+// existe. Enquanto o `twenty apply` não roda, a página tem que mostrar o aviso
+// de "app não instalada" em vez de derrubar a rota inteira.
+const OBJETOS_NECESSARIOS = [
+  'proposta',
+  'projeto',
+  'parcela',
+  'configuracaoScore',
+] as const;
 
 export const useIsDomainInstalled = (): boolean => {
   const { objectMetadataItems } = useObjectMetadataItems();

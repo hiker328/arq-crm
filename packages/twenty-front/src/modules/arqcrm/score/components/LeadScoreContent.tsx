@@ -1,10 +1,13 @@
 import { styled } from '@linaria/react';
 import { useMemo, useState } from 'react';
+import { IconAdjustments } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 import { PeriodoSegmentado } from '@/arqcrm/painel/components/PeriodoSegmentado';
 import { LeadScoreDetalhe } from '@/arqcrm/score/components/LeadScoreDetalhe';
+import { PesosEditor } from '@/arqcrm/score/components/PesosEditor';
 import { ScoreQueue } from '@/arqcrm/score/components/ScoreQueue';
+import { useConfiguracaoScore } from '@/arqcrm/score/hooks/useConfiguracaoScore';
 import {
   GRADE_SIGNIFICADO,
   corDaGrade,
@@ -132,6 +135,31 @@ const StyledExplicacao = styled.p`
   margin: 0;
 `;
 
+const StyledAjustar = styled.button`
+  align-items: center;
+  background: transparent;
+  border: 1px solid ${themeCssVariables.border.color.light};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.tertiary};
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: ${themeCssVariables.font.size.xs};
+  gap: 5px;
+  padding: ${themeCssVariables.spacing[1]} ${themeCssVariables.spacing[2]};
+
+  &:hover {
+    border-color: ${themeCssVariables.border.color.medium};
+    color: ${themeCssVariables.font.color.primary};
+  }
+`;
+
+const StyledControles = styled.div`
+  align-items: center;
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
 const StyledFiltroAtivo = styled.button`
   background: none;
   border: none;
@@ -166,8 +194,10 @@ export const LeadScoreContent = () => {
   const [ordem, setOrdem] = useState<OrdemDaFila>('atencao');
   const [gradeFiltrada, setGradeFiltrada] = useState<string | null>(null);
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
+  const [ajustando, setAjustando] = useState(false);
 
   const { isLoading, leads, porGrade, semPontuacao } = useLeadScores(ordem);
+  const { configuracao, salvar } = useConfiguracaoScore();
 
   const filtrados = useMemo(
     () =>
@@ -218,12 +248,26 @@ export const LeadScoreContent = () => {
                 ? 'Fila'
                 : `Fila — grade ${gradeFiltrada}`}
             </StyledFilaTitulo>
-            <PeriodoSegmentado
-              ariaLabel="Ordem da fila"
-              onChange={setOrdem}
-              options={ORDENS}
-              value={ordem}
-            />
+            <StyledControles>
+              <PeriodoSegmentado
+                ariaLabel="Ordem da fila"
+                onChange={setOrdem}
+                options={ORDENS}
+                value={ordem}
+              />
+              {/* Só aparece com configuração carregada: um botão que abre um
+                  painel vazio é pior que botão nenhum. */}
+              {configuracao !== null && (
+                <StyledAjustar
+                  onClick={() => setAjustando(true)}
+                  title="Ajustar os pesos do score"
+                  type="button"
+                >
+                  <IconAdjustments size={13} />
+                  Pesos
+                </StyledAjustar>
+              )}
+            </StyledControles>
           </StyledFilaTopo>
 
           <StyledExplicacao>
@@ -264,6 +308,14 @@ export const LeadScoreContent = () => {
 
         <LeadScoreDetalhe lead={isLoading ? null : selecionado} />
       </StyledColunas>
+
+      {ajustando && configuracao !== null && (
+        <PesosEditor
+          configuracao={configuracao}
+          onFechar={() => setAjustando(false)}
+          onSalvar={salvar}
+        />
+      )}
     </StyledConteudo>
   );
 };
