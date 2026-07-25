@@ -1,0 +1,139 @@
+/* Tema ORBE — sobrescreve os tokens do Twenty depois que eles carregam.
+ *
+ * Isto é UM arquivo que muda TODAS as telas. É o único jeito honesto de
+ * atender "melhora todas as telas" sem reescrever componente por componente:
+ * o design system inteiro do Twenty consome estas variáveis, então mexer aqui
+ * alcança o menu, as tabelas, o kanban nativo, os modais e as configurações de
+ * uma vez — e sem tocar em nenhum arquivo do upstream além do import.
+ *
+ * ── O que estava errado ────────────────────────────────────────────────────
+ *
+ * 1. A ELEVAÇÃO ESTAVA INVERTIDA NO TEMA ESCURO. A casca onde o menu lateral
+ *    vive (`gray3`, 0.098) era MAIS CLARA que a folha de conteúdo
+ *    (`background-primary`, 0.09). O olho lê "mais claro = mais perto", então
+ *    o menu parecia flutuar sobre o conteúdo em vez do contrário, e o conjunto
+ *    virava um plano só. É a origem principal do aspecto chapado.
+ *
+ * 2. AS BORDAS ERAM INVISÍVEIS. `border-color-light` valia 0.114 — exatamente
+ *    a mesma cor de `background-tertiary`. Cartão sem aresta não lê como
+ *    cartão; lê como um retângulo de texto.
+ *
+ * 3. TUDO ERA CINZA PURO. Os tokens são R=G=B. As referências que o cliente
+ *    mandou não são: têm um viés frio no escuro e um cinza levemente azulado
+ *    no claro. É sutil e é justamente o que separa "interface de ferramenta"
+ *    de "documento".
+ *
+ * 4. A AMPLITUDE TOTAL ERA DE 4%. Do fundo mais escuro ao mais claro havia
+ *    0.09 → 0.133. Não dá para construir hierarquia em 4% de faixa.
+ *
+ * ── Regras ao mexer aqui ───────────────────────────────────────────────────
+ *
+ * - Só tokens. Nenhum seletor de componente: classe de Linaria tem hash e
+ *   muda a cada build do upstream, então acoplar a ela quebra sozinho.
+ * - Mantenha a rampa de elevação monotônica: casca < folha < superfície <
+ *   hover. Inverter de novo recria exatamente o problema que isto conserta.
+ * - Contraste de texto sobre cada fundo precisa continuar passando. Os tons de
+ *   fonte não foram alterados de propósito — só os fundos e as bordas.
+ */
+
+/* ─────────────────────────────── ESCURO ─────────────────────────────────── */
+
+:root.dark,
+.dark {
+  /* Rampa de elevação, do mais fundo ao mais próximo. Viés frio (o azul sobe
+     um pouco mais que o vermelho) para não ficar cinza de cimento. */
+
+  /* Casca do app: o plano onde o menu lateral se apoia. O mais escuro de todos. */
+  --t-gray-scale-gray3: color(display-p3 0.055 0.058 0.067);
+
+  /* Folha de conteúdo — agora claramente ACIMA da casca, que é o conserto. */
+  --t-background-primary: color(display-p3 0.088 0.092 0.104);
+
+  /* Fundo de página e de campos de entrada. */
+  --t-background-tertiary: color(display-p3 0.072 0.076 0.086);
+
+  /* Cartões e painéis: a superfície mais alta em repouso. */
+  --t-background-secondary: color(display-p3 0.112 0.117 0.131);
+
+  /* Hover e estados ativos. */
+  --t-background-quaternary: color(display-p3 0.148 0.154 0.171);
+
+  --t-gray-scale-gray1: color(display-p3 0.088 0.092 0.104);
+  --t-gray-scale-gray2: color(display-p3 0.112 0.117 0.131);
+  --t-gray-scale-gray4: color(display-p3 0.148 0.154 0.171);
+
+  /* Bordas visíveis. Sem isto, cartão não tem aresta e a tela vira um bloco. */
+  --t-border-color-light: color(display-p3 0.176 0.183 0.203);
+  --t-border-color-medium: color(display-p3 0.235 0.243 0.267);
+  --t-border-color-strong: color(display-p3 0.34 0.35 0.38);
+
+  /* Realce de hover um pouco mais presente: com fundos mais escuros, 5.9% de
+     branco quase não aparecia. */
+  --t-background-transparent-light: color(display-p3 1 1 1 / 0.075);
+  --t-background-transparent-lighter: color(display-p3 1 1 1 / 0.042);
+
+  /* Sombras de verdade. As originais eram quase transparentes sobre um fundo
+     que já era claro; sobre um fundo escuro elas precisam ser opacas. */
+  --t-box-shadow-light: 0 1px 2px color(display-p3 0 0 0 / 0.32);
+  --t-box-shadow-strong: 0 8px 24px color(display-p3 0 0 0 / 0.44);
+}
+
+/* ──────────────────────────────── CLARO ─────────────────────────────────── */
+
+:root.light,
+.light {
+  /* No claro a lógica se inverte: a casca é o cinza e a folha é branca. Era
+     assim, mas com 2.4% de diferença. As referências usam ~5%, que é o que
+     faz o cartão branco descolar do fundo. */
+  --t-gray-scale-gray3: color(display-p3 0.941 0.945 0.957);
+  --t-background-primary: color(display-p3 1 1 1);
+  --t-background-secondary: color(display-p3 1 1 1);
+  --t-background-tertiary: color(display-p3 0.965 0.968 0.976);
+  --t-background-quaternary: color(display-p3 0.925 0.929 0.941);
+
+  --t-gray-scale-gray1: color(display-p3 1 1 1);
+  --t-gray-scale-gray2: color(display-p3 0.988 0.99 0.996);
+  --t-gray-scale-gray4: color(display-p3 0.925 0.929 0.941);
+
+  --t-border-color-light: color(display-p3 0.898 0.906 0.922);
+  --t-border-color-medium: color(display-p3 0.847 0.855 0.875);
+  --t-border-color-strong: color(display-p3 0.741 0.749 0.773);
+
+  --t-box-shadow-light: 0 1px 2px color(display-p3 0.06 0.07 0.12 / 0.06);
+  --t-box-shadow-strong: 0 8px 24px color(display-p3 0.06 0.07 0.12 / 0.1);
+}
+
+/* ─────────────────────────── RAIO, NOS DOIS TEMAS ───────────────────────── */
+
+/* As referências usam canto bem mais arredondado que o padrão do Twenty
+   (4px/8px). Subir o raio é a mudança de menor esforço e maior efeito
+   percebido — vale para botão, campo, cartão, modal e item de menu ao mesmo
+   tempo. Os tokens `pill`, `rounded` e `*-round` NÃO são tocados: pertencem a
+   elementos que devem continuar circulares (avatar, caixa de seleção, tag). */
+
+:root.dark,
+:root.light,
+.dark,
+.light {
+  --t-border-radius-xs: 3px;
+  --t-border-radius-sm: 6px;
+  --t-border-radius-md: 10px;
+  --t-border-radius-lg: 18px;
+  --t-border-radius-xl: 24px;
+}
+
+/* O upstream dobra os raios quando o navegador suporta `corner-shape:
+   squircle`. Mantemos o gesto — squircle fica melhor mesmo — mas partindo dos
+   nossos valores, senão o bloco original vence o nosso e volta ao 16px dele. */
+@supports (corner-shape: squircle) {
+  :root.dark,
+  :root.light,
+  .dark,
+  .light {
+    --t-border-radius-xs: 5px;
+    --t-border-radius-sm: 10px;
+    --t-border-radius-md: 18px;
+    --t-border-radius-lg: 30px;
+    --t-border-radius-xl: 40px;
+  }
+}

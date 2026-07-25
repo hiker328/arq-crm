@@ -14,6 +14,9 @@ import 'twenty-ui/style.css';
 import 'twenty-ui/theme-light.css';
 import 'twenty-ui/theme-dark.css';
 import './index.css';
+// Depois dos temas do Twenty de propósito: sobrescreve os tokens. Um arquivo,
+// todas as telas. Ver o cabeçalho dele para o que estava errado e por quê.
+import '@/arqcrm/theme/orbe-theme.css';
 
 // TODO: REMOVE this after 2026-12-12 — temporary migration of tokenPair from the
 // legacy cookie to localStorage (legacy cookie has a 180-day expiry).
